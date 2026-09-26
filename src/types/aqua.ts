@@ -39,3 +39,43 @@ export interface AquaKpi {
   dailyOxygenConsumptionKg: number;
   waterRecirculationEfficiencyPct: number;
 }
+
+export interface WaterTreatmentLoop {
+  skimmerId: string;
+  name: string;
+  foamRemovalRateGramsHr: number;
+  collectionCupLevelPct: number;
+  ozoneInjectionMgHr: number;
+  ozoneStatus: "OPTIMAL_OXIDATION" | "BOOST_PURGE" | "STANDBY";
+  mbbrTanMgL: number; // Total Ammonia Nitrogen (<0.05)
+  mbbrNitriteMgL: number; // NO2- (<0.10)
+  mbbrNitrateMgL: number; // NO3- (<25)
+  alkalinityPpm: number; // 120-160 ppm CaCO3
+  drumFilterMeshMicron: number; // 40
+  lastBackwashSecAgo: number;
+  uvDoseMjCm2: number; // 42 mJ/cm2
+  uvSterilizerStatus: "ACTIVE_GERMICIDAL" | "LAMP_SERVICE_REQUIRED";
+}
+
+export interface AscBapPassport {
+  passportId: string;
+  batchCode: string;
+  commodityScientificName: string;
+  commodityCommercialName: string;
+  hatcheryOrigin: string;
+  ascCertificateNumber: string;
+  bapStarRating: number;
+  antibioticScreeningResult: string;
+  heavyMetalsScreening: {
+    mercuryHgPpm: number;
+    leadPbPpm: number;
+    cadmiumCdPpm: number;
+  };
+  feedEcoFootprintGramsCo2PerKg: number;
+  waterRecirculationAuditIndexPct: number;
+  harvestNetWeightKg: number;
+  qaInspectorName: string;
+  chiefAquaculturistName: string;
+  issueDate: string;
+  status: "VERIFIED_EXPORT_GRADE" | "AUDIT_CLEARED";
+}

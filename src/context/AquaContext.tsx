@@ -1,7 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { RasTank, BiomassBatch, AquaKpi } from "@/types/aqua";
+import {
+  RasTank,
+  BiomassBatch,
+  AquaKpi,
+  WaterTreatmentLoop,
+  AscBapPassport,
+} from "@/types/aqua";
 
 interface AquaContextType {
   tanks: RasTank[];
@@ -13,6 +19,14 @@ interface AquaContextType {
   adjustFlowRate: (tankId: string, delta: number) => void;
   triggerAcousticFeed: (batchId: string) => void;
   addBatch: (b: Omit<BiomassBatch, "batchId">) => void;
+  waterLoop: WaterTreatmentLoop;
+  toggleOzoneBoost: () => void;
+  drainSkimmerCup: () => void;
+  triggerDrumBackwash: () => void;
+  adjustAlkalinity: (delta: number) => void;
+  passports: AscBapPassport[];
+  selectedPassportId: string;
+  setSelectedPassportId: (id: string) => void;
   resetAquaData: () => void;
 }
 
@@ -131,98 +145,218 @@ const INITIAL_BATCHES: BiomassBatch[] = [
   },
 ];
 
+const INITIAL_WATER_LOOP: WaterTreatmentLoop = {
+  skimmerId: "SKIMMER-ALPHA-01",
+  name: "VENTURI FRACTIONATION PROTEIN SKIMMER #1",
+  foamRemovalRateGramsHr: 480,
+  collectionCupLevelPct: 68,
+  ozoneInjectionMgHr: 125,
+  ozoneStatus: "OPTIMAL_OXIDATION",
+  mbbrTanMgL: 0.032,
+  mbbrNitriteMgL: 0.048,
+  mbbrNitrateMgL: 14.8,
+  alkalinityPpm: 145,
+  drumFilterMeshMicron: 40,
+  lastBackwashSecAgo: 140,
+  uvDoseMjCm2: 44.5,
+  uvSterilizerStatus: "ACTIVE_GERMICIDAL",
+};
+
+const INITIAL_PASSPORTS: AscBapPassport[] = [
+  {
+    passportId: "ASC-BAP-2026-089",
+    batchCode: "BTCH-VAN-2026-A1",
+    commodityScientificName: "Litopenaeus vannamei",
+    commodityCommercialName: "Pacific White Shrimp (Sashimi-Grade Frozen PL)",
+    hatcheryOrigin: "SPF Hatchery Unit Samudera Lestari #04",
+    ascCertificateNumber: "ASC-C-02941-IDN-2026",
+    bapStarRating: 4,
+    antibioticScreeningResult: "ND (Not Detected < 0.00 µg/kg Screening)",
+    heavyMetalsScreening: {
+      mercuryHgPpm: 0.004,
+      leadPbPpm: 0.008,
+      cadmiumCdPpm: 0.003,
+    },
+    feedEcoFootprintGramsCo2PerKg: 1240,
+    waterRecirculationAuditIndexPct: 98.4,
+    harvestNetWeightKg: 3120,
+    qaInspectorName: "Dr. Raymond Tjakra, M.Sc (Aquatic Pathologist)",
+    chiefAquaculturistName: "Ir. Marini Samudera, IPU",
+    issueDate: "26 September 2026",
+    status: "VERIFIED_EXPORT_GRADE",
+  },
+  {
+    passportId: "ASC-BAP-2026-090",
+    batchCode: "BTCH-BAR-2026-B2",
+    commodityScientificName: "Lates calcarifer",
+    commodityCommercialName: "Asian Seabass / Barramundi Whole Round Grade-A",
+    hatcheryOrigin: "Marine Finfish Biosecure Center Bali",
+    ascCertificateNumber: "ASC-C-03115-IDN-2026",
+    bapStarRating: 4,
+    antibioticScreeningResult: "ND (Not Detected < 0.00 µg/kg Screening)",
+    heavyMetalsScreening: {
+      mercuryHgPpm: 0.005,
+      leadPbPpm: 0.009,
+      cadmiumCdPpm: 0.002,
+    },
+    feedEcoFootprintGramsCo2PerKg: 1580,
+    waterRecirculationAuditIndexPct: 98.7,
+    harvestNetWeightKg: 5400,
+    qaInspectorName: "Dr. Raymond Tjakra, M.Sc (Aquatic Pathologist)",
+    chiefAquaculturistName: "Ir. Marini Samudera, IPU",
+    issueDate: "26 September 2026",
+    status: "AUDIT_CLEARED",
+  },
+];
+
 const AquaContext = createContext<AquaContextType | undefined>(undefined);
 
 export function AquaProvider({ children }: { children: React.ReactNode }) {
   const [tanks, setTanks] = useState<RasTank[]>(INITIAL_TANKS);
   const [batches, setBatches] = useState<BiomassBatch[]>(INITIAL_BATCHES);
   const [selectedTankId, setSelectedTankId] = useState<string>("TANK-01");
+  const [waterLoop, setWaterLoop] = useState<WaterTreatmentLoop>(INITIAL_WATER_LOOP);
+  const [passports] = useState<AscBapPassport[]>(INITIAL_PASSPORTS);
+  const [selectedPassportId, setSelectedPassportId] = useState<string>("ASC-BAP-2026-089");
 
   useEffect(() => {
     try {
       const savedTanks = localStorage.getItem("aquamarine_tanks");
       const savedBatches = localStorage.getItem("aquamarine_batches");
+      const savedWater = localStorage.getItem("aquamarine_water");
       if (savedTanks) setTanks(JSON.parse(savedTanks));
       if (savedBatches) setBatches(JSON.parse(savedBatches));
+      if (savedWater) setWaterLoop(JSON.parse(savedWater));
     } catch {}
   }, []);
 
-  useEffect(() => {
+  const saveTanks = (newTanks: RasTank[]) => {
+    setTanks(newTanks);
     try {
-      localStorage.setItem("aquamarine_tanks", JSON.stringify(tanks));
-      localStorage.setItem("aquamarine_batches", JSON.stringify(batches));
+      localStorage.setItem("aquamarine_tanks", JSON.stringify(newTanks));
     } catch {}
-  }, [tanks, batches]);
+  };
+
+  const saveBatches = (newBatches: BiomassBatch[]) => {
+    setBatches(newBatches);
+    try {
+      localStorage.setItem("aquamarine_batches", JSON.stringify(newBatches));
+    } catch {}
+  };
+
+  const saveWater = (w: WaterTreatmentLoop) => {
+    setWaterLoop(w);
+    try {
+      localStorage.setItem("aquamarine_water", JSON.stringify(w));
+    } catch {}
+  };
 
   const toggleAerator = (tankId: string) => {
-    setTanks((prev) =>
-      prev.map((t) => {
-        if (t.id !== tankId) return t;
-        const next =
+    const updated = tanks.map((t) => {
+      if (t.id === tankId) {
+        const nextStatus: RasTank["aeratorStatus"] =
           t.aeratorStatus === "VENTURI_DIFFUSER_MAX"
             ? "PADDLEWHEEL_NOMINAL"
             : t.aeratorStatus === "PADDLEWHEEL_NOMINAL"
             ? "ECO_RECIRCULATION"
             : "VENTURI_DIFFUSER_MAX";
-        const doDelta = next === "VENTURI_DIFFUSER_MAX" ? 0.6 : next === "PADDLEWHEEL_NOMINAL" ? 0.2 : -0.5;
+        const newDO =
+          nextStatus === "VENTURI_DIFFUSER_MAX"
+            ? Math.min(8.5, Number((t.dissolvedOxygenMgL + 0.6).toFixed(1)))
+            : nextStatus === "PADDLEWHEEL_NOMINAL"
+            ? 6.8
+            : 5.8;
         return {
           ...t,
-          aeratorStatus: next,
-          dissolvedOxygenMgL: Math.round((t.dissolvedOxygenMgL + doDelta) * 10) / 10,
+          aeratorStatus: nextStatus,
+          dissolvedOxygenMgL: newDO,
+          status: newDO < 6.0 ? ("HYPOXIA_WARNING" as const) : ("OPTIMAL_AEROBIC" as const),
         };
-      })
-    );
+      }
+      return t;
+    });
+    saveTanks(updated);
   };
 
   const adjustFlowRate = (tankId: string, delta: number) => {
-    setTanks((prev) =>
-      prev.map((t) =>
-        t.id === tankId
-          ? { ...t, flowRateLps: Math.max(10, Math.round((t.flowRateLps + delta) * 10) / 10) }
-          : t
-      )
-    );
+    const updated = tanks.map((t) => {
+      if (t.id === tankId) {
+        const newFlow = Math.max(10, Math.min(100, Number((t.flowRateLps + delta).toFixed(1))));
+        return { ...t, flowRateLps: newFlow };
+      }
+      return t;
+    });
+    saveTanks(updated);
   };
 
   const triggerAcousticFeed = (batchId: string) => {
-    setBatches((prev) =>
-      prev.map((b) =>
-        b.batchId === batchId
-          ? {
-              ...b,
-              acousticFeederStatus:
-                b.acousticFeederStatus === "ACTIVE_DISPERSION" ? "STANDBY" : "ACTIVE_DISPERSION",
-            }
-          : b
-      )
-    );
+    const updated = batches.map((b) => {
+      if (b.batchId === batchId) {
+        const nextStatus: BiomassBatch["acousticFeederStatus"] =
+          b.acousticFeederStatus === "ACTIVE_DISPERSION" ? "STANDBY" : "ACTIVE_DISPERSION";
+        return {
+          ...b,
+          acousticFeederStatus: nextStatus,
+          totalFeedConsumedKg:
+            nextStatus === "ACTIVE_DISPERSION" ? b.totalFeedConsumedKg + 15 : b.totalFeedConsumedKg,
+        };
+      }
+      return b;
+    });
+    saveBatches(updated);
   };
 
   const addBatch = (b: Omit<BiomassBatch, "batchId">) => {
-    const newId = `BTCH-MAR-2026-X${String(batches.length + 4).padStart(2, "0")}`;
-    setBatches((prev) => [{ ...b, batchId: newId }, ...prev]);
+    const newBatch: BiomassBatch = {
+      ...b,
+      batchId: `BTCH-AQ-${Date.now().toString().slice(-4)}`,
+    };
+    saveBatches([...batches, newBatch]);
+  };
+
+  const toggleOzoneBoost = () => {
+    const nextOzone =
+      waterLoop.ozoneStatus === "OPTIMAL_OXIDATION"
+        ? ("BOOST_PURGE" as const)
+        : ("OPTIMAL_OXIDATION" as const);
+    const newMg = nextOzone === "BOOST_PURGE" ? 220 : 125;
+    saveWater({ ...waterLoop, ozoneStatus: nextOzone, ozoneInjectionMgHr: newMg });
+  };
+
+  const drainSkimmerCup = () => {
+    saveWater({ ...waterLoop, collectionCupLevelPct: 5 });
+  };
+
+  const triggerDrumBackwash = () => {
+    saveWater({ ...waterLoop, lastBackwashSecAgo: 0 });
+  };
+
+  const adjustAlkalinity = (delta: number) => {
+    const newAlk = Math.max(80, Math.min(220, waterLoop.alkalinityPpm + delta));
+    saveWater({ ...waterLoop, alkalinityPpm: newAlk });
   };
 
   const resetAquaData = () => {
-    setTanks(INITIAL_TANKS);
-    setBatches(INITIAL_BATCHES);
+    saveTanks(INITIAL_TANKS);
+    saveBatches(INITIAL_BATCHES);
+    saveWater(INITIAL_WATER_LOOP);
     setSelectedTankId("TANK-01");
-    localStorage.removeItem("aquamarine_tanks");
-    localStorage.removeItem("aquamarine_batches");
   };
 
-  const totalVol = tanks.reduce((sum, t) => sum + t.volumeM3, 0);
-  const totalBiomass = tanks.reduce((sum, t) => sum + t.biomassKg, 0);
-  const avgSr =
-    Math.round((batches.reduce((sum, b) => sum + b.currentSurvivalRatePct, 0) / batches.length) * 10) / 10;
+  const totalWaterVolumeM3 = tanks.reduce((acc, t) => acc + t.volumeM3, 0);
+  const totalBiomassKg = tanks.reduce((acc, t) => acc + t.biomassKg, 0);
+  const meanSurvival =
+    batches.length > 0
+      ? Number((batches.reduce((acc, b) => acc + b.currentSurvivalRatePct, 0) / batches.length).toFixed(1))
+      : 88.0;
 
   const kpis: AquaKpi = {
-    totalWaterVolumeM3: totalVol,
+    totalWaterVolumeM3,
     activeRasTanks: tanks.length,
-    totalBiomassTons: Math.round((totalBiomass / 1000) * 10) / 10,
-    meanSurvivalRatePct: avgSr,
-    dailyOxygenConsumptionKg: 142.5,
-    waterRecirculationEfficiencyPct: 98.6,
+    totalBiomassTons: Number((totalBiomassKg / 1000).toFixed(2)),
+    meanSurvivalRatePct: meanSurvival,
+    dailyOxygenConsumptionKg: Number((totalBiomassKg * 0.018).toFixed(1)),
+    waterRecirculationEfficiencyPct: 98.4,
   };
 
   return (
@@ -237,6 +371,14 @@ export function AquaProvider({ children }: { children: React.ReactNode }) {
         adjustFlowRate,
         triggerAcousticFeed,
         addBatch,
+        waterLoop,
+        toggleOzoneBoost,
+        drainSkimmerCup,
+        triggerDrumBackwash,
+        adjustAlkalinity,
+        passports,
+        selectedPassportId,
+        setSelectedPassportId,
         resetAquaData,
       }}
     >
@@ -247,6 +389,6 @@ export function AquaProvider({ children }: { children: React.ReactNode }) {
 
 export function useAqua() {
   const context = useContext(AquaContext);
-  if (!context) throw new Error("useAqua must be used within AquaProvider");
+  if (!context) throw new Error("useAqua must be used within an AquaProvider");
   return context;
 }

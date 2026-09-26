@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAqua } from "@/context/AquaContext";
-import { Waves, Fish, Activity, RotateCcw, Droplets, Compass } from "lucide-react";
+import { Waves, Fish, Activity, RotateCcw, Droplets, Award } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -13,6 +13,8 @@ export default function Navbar() {
   const links = [
     { href: "/", label: "RAS TANKS & O2", icon: Waves },
     { href: "/biomass/", label: "BIOMASSA & FEEDER", icon: Fish },
+    { href: "/water/", label: "WATER TREATMENT & BIOFILTER", icon: Droplets },
+    { href: "/traceability/", label: "PASPOR ASC/BAP A4", icon: Award },
   ];
 
   return (
@@ -63,7 +65,7 @@ export default function Navbar() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {links.map((link) => {
             const Icon = link.icon;
             const isActive = link.href === "/"
@@ -73,7 +75,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all border ${
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold rounded-xl transition-all border ${
                   isActive
                     ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-300 shadow-[0_0_12px_rgba(0,242,254,0.5)] font-black"
                     : "bg-[#0A192F]/60 text-[#BAE6FD] border-cyan-500/20 hover:border-cyan-400 hover:text-white"
